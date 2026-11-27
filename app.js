@@ -212,8 +212,14 @@ function showAnswer(text) {
 // demo-UI mode) still renders even if the CDN or the network is unavailable.
 // ---------------------------------------------------------------------------
 let aiBackend = null; // { ai } once initialised
+let aiInitPromise = null; // memoised so warm-up and click never init twice
 
-async function initFirebase() {
+function initFirebase() {
+  if (!aiInitPromise) aiInitPromise = initFirebaseOnce();
+  return aiInitPromise;
+}
+
+async function initFirebaseOnce() {
   const { initializeApp } = await import(CDN + "/firebase-app.js");
   const { getAI, GoogleAIBackend } = await import(CDN + "/firebase-ai.js");
   const app = initializeApp(firebaseConfig);
@@ -280,7 +286,7 @@ async function analyze() {
     const { getGenerativeModel, InferenceMode } = await import(
       CDN + "/firebase-ai.js"
     );
-    if (!aiBackend) await initFirebase();
+    await initFirebase();
     const { ai } = aiBackend;
 
     const nanoProbe = await probeNano();
@@ -331,12 +337,26 @@ async function analyze() {
         showAnswer(result.response.text());
         return;
       }
-      // Transient model overload (HTTP 500 "high demand", seen live from a
-      // real phone on 27 Nov 2026): wait a few seconds, retry exactly once.
-      if (!/high demand|overloaded|temporarily|\b500\b|unavailable/i.test(err?.message || "")) throw err;
-      setProgress("Server AI sedang sibuk — mencoba sekali lagi…");
-      await new Promise((r) => setTimeout(r, 3500));
-      result = await model.generateContent(prompt);
+      // Transient model overload, seen live from a real phone on
+      // 27 Nov 2026 in two shapes: HTTP 500 "high demand" and HTTP 503
+      // "Deadline expired before operation could complete". Both are the
+      // cloud model being saturated, not an app error — wait and retry,
+      // up to two extra attempts with growing delays.
+      if (!/high demand|overloaded|temporarily|deadline expired|\b50[03]\b|unavailable/i.test(err?.message || "")) throw err;
+      const delays = [3500, 8000];
+      let lastErr = err;
+      for (const wait of delays) {
+        setProgress("Server AI sedang sibuk — mencoba lagi sebentar…");
+        await new Promise((r) => setTimeout(r, wait));
+        try {
+          result = await model.generateContent(prompt);
+          lastErr = null;
+          break;
+        } catch (e2) {
+          lastErr = e2;
+        }
+      }
+      if (lastErr) throw lastErr;
     }
 
     badgeFromResult(result, nanoProbe);
@@ -345,7 +365,7 @@ async function analyze() {
     console.error(err);
     showBadge("CLOUD", "");
     els.modeNote.textContent = "";
-    if (/high demand|overloaded|temporarily|\b500\b/i.test(err?.message || "")) {
+    if (/high demand|overloaded|temporarily|deadline expired|\b50[03]\b/i.test(err?.message || "")) {
       setError(
         "Server AI Google sedang sangat sibuk saat ini — ini sementara dan bukan kesalahan aplikasinya. Tunggu sebentar, lalu ketuk Analisis lagi."
       );
@@ -365,6 +385,13 @@ async function analyze() {
 
 // ---------------------------------------------------------------------------
 // Boot: status line + probe. No AI call happens until the user clicks.
+// Warm-up (added 27 Nov 2026 after a real-phone test on a ~1 KB/s
+// connection felt very slow): in configured mode, pre-load the Firebase
+// SDK and initialise Firebase + App Check in the background shortly after
+// the page opens, so the first Analisis click does not have to download
+// several hundred KB before the analysis can even start. This spends a
+// little data on page load; inference itself still waits for the click,
+// and initialising the on-device model still happens at click time.
 // ---------------------------------------------------------------------------
 (async function boot() {
   els.firebaseStatus.textContent = isConfigured()
@@ -372,6 +399,16 @@ async function analyze() {
     : "belum diisi — mode demo UI";
   const probe = await probeNano();
   els.nanoStatus.textContent = probe.label;
+  if (isConfigured()) {
+    const warm = () => {
+      initFirebase().catch((e) => console.info("warm-up:", e?.message || e));
+    };
+    if ("requestIdleCallback" in window) {
+      requestIdleCallback(warm, { timeout: 4000 });
+    } else {
+      setTimeout(warm, 1500);
+    }
+  }
 })();
 
 els.btn.addEventListener("click", analyze);
