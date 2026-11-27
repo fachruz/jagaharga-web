@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<link rel="icon" href="data:,">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JagaHarga Web — Asisten Cek Harga Belanja</title>
+<meta name="description" content="Asisten cek daftar belanja bertenaga Firebase AI Logic hybrid: Gemini Nano di perangkat bila tersedia, fallback cloud bila tidak.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="banner">
+    <h1>JagaHarga Web</h1>
+    <p class="tagline">Asisten cek harga belanja — AI hybrid: jalan di perangkatmu bila bisa, di cloud bila tidak.</p>
+  </header>
+
+  <main>
+    <!-- Status bar: Firebase config + on-device (Gemini Nano) availability probe -->
+    <section class="statusbar" aria-label="Status sistem">
+      <div class="status-item">
+        <span class="status-label">Firebase:</span>
+        <span id="firebaseStatus" class="status-value">memeriksa…</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Gemini Nano di perangkat ini:</span>
+        <span id="nanoStatus" class="status-value">memeriksa…</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <label for="listInput"><strong>Daftar belanja / nama produk</strong> (satu per baris, boleh pakai harga perkiraan)</label>
+      <textarea id="listInput" rows="8" placeholder="Contoh:&#10;Beras 5kg Rp78.000&#10;Kopi sachet 10x Rp15.000&#10;Sepatu lari Rp850.000&#10;Minyak goreng 2L Rp42.000"></textarea>
+
+      <label for="budgetInput"><strong>Anggaran belanja (Rp, opsional)</strong></label>
+      <input id="budgetInput" type="number" min="0" inputmode="numeric" placeholder="Contoh: 300000">
+
+      <button id="analyzeBtn" type="button">Analisis</button>
+      <p id="progressText" class="progress" hidden></p>
+      <p id="errorText" class="error" hidden></p>
+    </section>
+
+    <section id="resultCard" class="card result" hidden>
+      <div class="result-head">
+        <!-- Inference-mode badge: ON DEVICE vs CLOUD, from the SDK's inferenceSource -->
+        <span id="modeBadge" class="badge">—</span>
+        <span id="verdictChip" class="verdict" hidden></span>
+      </div>
+      <p id="modeNote" class="mode-note"></p>
+      <div id="answerText" class="answer"></div>
+    </section>
+
+    <footer>
+      <p>
+        Dibangun dengan <strong>Firebase AI Logic</strong> mode hybrid
+        (<code>InferenceMode.PREFER_ON_DEVICE</code>): Gemini Nano lewat Prompt API Chrome
+        di perangkat bila tersedia, otomatis fallback ke model Gemini di cloud bila tidak.
+        Mode on-device butuh Chrome desktop versi 139+; di browser/perangkat lain jawaban
+        akan selalu berasal dari cloud — dan lencananya akan berkata sejujurnya.
+      </p>
+    </footer>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

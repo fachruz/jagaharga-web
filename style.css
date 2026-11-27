@@ -1,0 +1,124 @@
+/* JagaHarga Web — plain CSS, no framework. */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #f4f6f4;
+  color: #1c2b1e;
+}
+
+.banner {
+  background: linear-gradient(135deg, #1b7a43, #2ea35c);
+  color: #fff;
+  padding: 28px 20px 22px;
+  text-align: center;
+}
+.banner h1 { margin: 0 0 6px; font-size: 1.9rem; }
+.tagline { margin: 0; opacity: 0.92; }
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.statusbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  background: #fff;
+  border: 1px solid #dde5dd;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+}
+.status-label { color: #5a6b5d; }
+.status-value { font-weight: 600; }
+
+.card {
+  background: #fff;
+  border: 1px solid #dde5dd;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+textarea, input[type="number"] {
+  width: 100%;
+  border: 1px solid #c4d2c6;
+  border-radius: 8px;
+  padding: 10px;
+  font: inherit;
+  background: #fbfdfb;
+}
+textarea:focus, input[type="number"]:focus {
+  outline: 2px solid #2ea35c;
+  outline-offset: 1px;
+}
+
+button {
+  align-self: flex-start;
+  background: #1b7a43;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 11px 26px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: #2ea35c; }
+button:disabled { opacity: 0.55; cursor: wait; }
+
+.progress { margin: 0; color: #1b7a43; font-size: 0.92rem; }
+.error { margin: 0; color: #b3261e; font-size: 0.92rem; white-space: pre-wrap; }
+
+.result-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The inference-mode badge — the heart of the demo. */
+.badge {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: #e8ece8;
+  color: #40513f;
+}
+.badge.on-device { background: #d9f2e2; color: #0d5c2e; border: 1px solid #2ea35c; }
+.badge.cloud     { background: #e1ebfb; color: #17457e; border: 1px solid #5b8dd9; }
+.badge.demo      { background: #fdf0d5; color: #7a5200; border: 1px solid #d9a441; }
+
+.verdict {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: #eef3ee;
+  border: 1px solid #b9c9bb;
+}
+.verdict.beli   { background: #d9f2e2; color: #0d5c2e; }
+.verdict.tunggu { background: #fde3e1; color: #8c1d18; }
+.verdict.campur { background: #fdf0d5; color: #7a5200; }
+
+.mode-note { margin: 0; font-size: 0.88rem; color: #5a6b5d; }
+.answer { white-space: pre-wrap; line-height: 1.55; }
+
+footer { font-size: 0.85rem; color: #5a6b5d; padding: 0 4px 12px; }
+footer code { background: #e8ece8; padding: 1px 5px; border-radius: 4px; }
+
+/* Atribut hidden harus selalu menang atas display komponen */
+[hidden] { display: none !important; }
