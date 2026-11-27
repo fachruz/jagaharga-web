@@ -318,18 +318,25 @@ async function analyze() {
       // Known edge (also seen in other hybrid apps): for oversized inputs
       // Chrome can throw QuotaExceededError, which PREFER_ON_DEVICE does
       // not always catch. Retry once, explicitly in the cloud.
-      if (!/quota/i.test(err?.name + " " + err?.message)) throw err;
-      setProgress("Input terlalu besar untuk Gemini Nano — mencoba ulang lewat cloud…");
-      const cloudModel = getGenerativeModel(ai, {
-        mode: InferenceMode.ONLY_IN_CLOUD,
-        inCloudParams: { model: CLOUD_MODEL },
-      });
-      result = await cloudModel.generateContent(prompt);
-      badgeFromResult(result, nanoProbe);
-      els.modeNote.textContent +=
-        " (Catatan: Gemini Nano menolak input ini sebagai terlalu besar, jadi jawaban dibuat di cloud.)";
-      showAnswer(result.response.text());
-      return;
+      if (/quota/i.test(err?.name + " " + err?.message)) {
+        setProgress("Input terlalu besar untuk Gemini Nano — mencoba ulang lewat cloud…");
+        const cloudModel = getGenerativeModel(ai, {
+          mode: InferenceMode.ONLY_IN_CLOUD,
+          inCloudParams: { model: CLOUD_MODEL },
+        });
+        result = await cloudModel.generateContent(prompt);
+        badgeFromResult(result, nanoProbe);
+        els.modeNote.textContent +=
+          " (Catatan: Gemini Nano menolak input ini sebagai terlalu besar, jadi jawaban dibuat di cloud.)";
+        showAnswer(result.response.text());
+        return;
+      }
+      // Transient model overload (HTTP 500 "high demand", seen live from a
+      // real phone on 27 Nov 2026): wait a few seconds, retry exactly once.
+      if (!/high demand|overloaded|temporarily|\b500\b|unavailable/i.test(err?.message || "")) throw err;
+      setProgress("Server AI sedang sibuk — mencoba sekali lagi…");
+      await new Promise((r) => setTimeout(r, 3500));
+      result = await model.generateContent(prompt);
     }
 
     badgeFromResult(result, nanoProbe);
@@ -338,11 +345,17 @@ async function analyze() {
     console.error(err);
     showBadge("CLOUD", "");
     els.modeNote.textContent = "";
-    setError(
-      "Analisis gagal: " +
-        (err?.message || err) +
-        "\nPeriksa konfigurasi Firebase, koneksi internet, dan (untuk localhost) token debug App Check — lihat README.md."
-    );
+    if (/high demand|overloaded|temporarily|\b500\b/i.test(err?.message || "")) {
+      setError(
+        "Server AI Google sedang sangat sibuk saat ini — ini sementara dan bukan kesalahan aplikasinya. Tunggu sebentar, lalu ketuk Analisis lagi."
+      );
+    } else {
+      setError(
+        "Analisis gagal: " +
+          (err?.message || err) +
+          "\nPeriksa konfigurasi Firebase, koneksi internet, dan (untuk localhost) token debug App Check — lihat README.md."
+      );
+    }
     els.resultCard.hidden = true;
   } finally {
     setProgress("");
