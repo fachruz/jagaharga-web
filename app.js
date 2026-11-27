@@ -29,13 +29,15 @@ const firebaseConfig = {
 };
 
 // App Check is ENFORCED for Firebase AI Logic in this project, so requests
-// need an App Check token. Production uses a reCAPTCHA v3 site key for the
-// deployed domain — paste it here after registering the domain in the
-// Firebase console (App Check > Apps). Local testing instead uses a debug
-// token: the QA harness sets self.FIREBASE_APPCHECK_DEBUG_TOKEN before the
-// page loads (the token itself is registered in the console and is NOT kept
-// in this file, so this repo stays safe to publish).
-const APPCHECK_RECAPTCHA_KEY = "";
+// need an App Check token. Production uses the Fraud Defense (reCAPTCHA
+// Enterprise) provider — Google deprecated new reCAPTCHA Classic
+// registrations, so the console only offers Fraud Defense now. Paste its
+// site key here after registering the provider in the Firebase console
+// (App Check > Apps). Local testing instead uses a debug token: the QA
+// harness sets self.FIREBASE_APPCHECK_DEBUG_TOKEN before the page loads
+// (the token itself is registered in the console and is NOT kept in this
+// file, so this repo stays safe to publish).
+const APPCHECK_ENTERPRISE_KEY = "6LdLJDQuAAAAALDf6W_ECp_CR9BIAiyauU0wmX_B";
 
 // Cloud model used when on-device inference is unavailable. Pinned
 // explicitly so behaviour is deterministic. (Was gemini-2.5-flash until
@@ -217,15 +219,22 @@ async function initFirebase() {
   const app = initializeApp(firebaseConfig);
   // Attach App Check BEFORE any AI request (enforcement is on for AI Logic).
   // In debug mode (localhost QA) the debug token replaces attestation, so
-  // the provider key is never actually used there.
-  if (self.FIREBASE_APPCHECK_DEBUG_TOKEN || APPCHECK_RECAPTCHA_KEY) {
+  // the provider key is never actually used there. In production the Fraud
+  // Defense (reCAPTCHA Enterprise) provider attests the deployed site.
+  if (self.FIREBASE_APPCHECK_DEBUG_TOKEN) {
     const { initializeAppCheck, ReCaptchaV3Provider } = await import(
       CDN + "/firebase-app-check.js"
     );
     initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider(
-        APPCHECK_RECAPTCHA_KEY || "localhost-debug"
-      ),
+      provider: new ReCaptchaV3Provider("localhost-debug"),
+      isTokenAutoRefreshEnabled: true,
+    });
+  } else if (APPCHECK_ENTERPRISE_KEY) {
+    const { initializeAppCheck, ReCaptchaEnterpriseProvider } = await import(
+      CDN + "/firebase-app-check.js"
+    );
+    initializeAppCheck(app, {
+      provider: new ReCaptchaEnterpriseProvider(APPCHECK_ENTERPRISE_KEY),
       isTokenAutoRefreshEnabled: true,
     });
   }

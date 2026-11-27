@@ -93,9 +93,14 @@ app transparently answers from the cloud and the badge shows CLOUD.
 The Firebase AI Logic console setup automatically enforces **App Check**.
 For local development on `localhost`, configure the App Check **debug
 provider** and register the debug token in the console (Firebase console →
-App Check → Apps → Manage debug tokens). For a deployed site, register a
-reCAPTCHA provider instead. If requests are rejected with App Check errors,
-this is the step to check.
+App Check → Apps → Manage debug tokens). For a deployed site, this project
+registers the **Fraud Defense** provider (formerly reCAPTCHA Enterprise —
+Google has deprecated new reCAPTCHA Classic registrations, so Fraud
+Defense is the only provider the console still accepts for web apps) and
+the app initialises App Check with `ReCaptchaEnterpriseProvider`. The
+project has no billing account, so it sits in the free Essentials tier
+(10,000 assessments/month; beyond that, checks are refused, not charged).
+If requests are rejected with App Check errors, this is the step to check.
 
 ## SDK / API notes (verified against official docs, 25 Nov 2026)
 
