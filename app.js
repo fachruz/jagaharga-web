@@ -323,17 +323,28 @@ async function analyze() {
     } catch (err) {
       // Known edge (also seen in other hybrid apps): for oversized inputs
       // Chrome can throw QuotaExceededError, which PREFER_ON_DEVICE does
-      // not always catch. Retry once, explicitly in the cloud.
+      // not always catch. Retry once, explicitly in the cloud. Careful:
+      // an HTTP 429 from the Gemini API also contains the word "quota"
+      // (the free tier allows only 20 requests/day for this model) — that
+      // is a different cause, so it gets a different progress text and a
+      // different, honest note (seen live on a phone, 27 Nov 2026: a 429
+      // first attempt followed by a successful cloud-only retry).
       if (/quota/i.test(err?.name + " " + err?.message)) {
-        setProgress("Input terlalu besar untuk Gemini Nano — mencoba ulang lewat cloud…");
+        const apiQuota = /\b429\b|quota exceeded for metric|free ?tier/i.test(err?.message || "");
+        setProgress(
+          apiQuota
+            ? "Batas kuota sesaat — mencoba sekali lagi lewat cloud…"
+            : "Input terlalu besar untuk Gemini Nano — mencoba ulang lewat cloud…"
+        );
         const cloudModel = getGenerativeModel(ai, {
           mode: InferenceMode.ONLY_IN_CLOUD,
           inCloudParams: { model: CLOUD_MODEL },
         });
         result = await cloudModel.generateContent(prompt);
         badgeFromResult(result, nanoProbe);
-        els.modeNote.textContent +=
-          " (Catatan: Gemini Nano menolak input ini sebagai terlalu besar, jadi jawaban dibuat di cloud.)";
+        els.modeNote.textContent += apiQuota
+          ? " (Catatan: percobaan pertama kena batas kuota sesaat; yang berhasil adalah percobaan ulang khusus cloud.)"
+          : " (Catatan: Gemini Nano menolak input ini sebagai terlalu besar, jadi jawaban dibuat di cloud.)";
         showAnswer(result.response.text());
         return;
       }
@@ -365,7 +376,11 @@ async function analyze() {
     console.error(err);
     showBadge("CLOUD", "");
     els.modeNote.textContent = "";
-    if (/high demand|overloaded|temporarily|deadline expired|\b50[03]\b/i.test(err?.message || "")) {
+    if (/\b429\b|quota exceeded|rate-limit/i.test(err?.message || "")) {
+      setError(
+        "Kuota gratis harian model AI ini sudah tercapai (tingkat gratis: 20 analisis per hari). Kuota diperbarui sekitar pukul 15:00 WIB — coba lagi sesudah itu."
+      );
+    } else if (/high demand|overloaded|temporarily|deadline expired|\b50[03]\b/i.test(err?.message || "")) {
       setError(
         "Server AI Google sedang sangat sibuk saat ini — ini sementara dan bukan kesalahan aplikasinya. Tunggu sebentar, lalu ketuk Analisis lagi."
       );
